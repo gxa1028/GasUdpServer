@@ -1,16 +1,11 @@
 package com.shu.iot.server;
 
-import com.shu.iot.handler.NettyUdpHandler;
+import com.shu.iot.handler.Dp2StrHandler;
+import com.shu.iot.handler.Msg2KafkaHandler;
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.epoll.Epoll;
-import io.netty.channel.epoll.EpollDatagramChannel;
+import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioDatagramChannel;
-import org.apache.logging.log4j.Marker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,7 +32,16 @@ public class UDPServer {
                 //设置接收缓冲区大小,可以不设置
                 //.option(ChannelOption.SO_RCVBUF, 1024 * 1024)
                 //设置处理类 装配流水线
-                .handler(new NettyUdpHandler());
+                .handler(new ChannelInitializer<Channel>() {
+                    @Override
+                    protected void initChannel(Channel channel) throws Exception {
+                        ChannelPipeline pipeline =channel.pipeline();
+                        //第1层Handler 将DataGramPacket转为String
+                        pipeline.addLast(new Dp2StrHandler());
+                        //第2层Handler 将消息push到Kafka
+                        pipeline.addLast(new Msg2KafkaHandler());
+                    }
+                });
         LOG.info("UDPServer init success");
     }
 
